@@ -1,52 +1,74 @@
 import flet as ft;
+from flet import TemplateRoute;
+from searchview import SearchView;
 
-class view():
+class View():
   def __init__(self, page, controls):
     self.page = page;
-    self.views = [];
     self.history = [];
+    self.controls = [];
     
     for control in controls:
-      control.visible = False;
-      self.views.append(control);
-      page.add(control);
+      self.controls.append(control.new());
       
+    for control in self.controls:
+      control.visible = False;
+      self.page.add(control);
+  
   def change(self, index):
-    if index >= len(self.views):
+    if index > len(self.controls):
       return;
-    if len(self.history) > 0:
+    elif len(self.history) > 0:
       self.history[-1].visible = False;
-    if len(self.history) >= 199:
-      self.history.clear();
- 
-    self.views[index].visible = True;
-    self.history.append(self.views[index]);
-
-def percent(n, total):
-  return (n / 100) * total;
+    
+    self.controls[index].visible = True;
+    self.history.append(self.controls[index]);
+    self.page.update();
+    
+class Router():
+  def __init__(self, page, view):
+    self.page = page;
+    self.view = view;
+    self.info = {};
+    self.page.on_route_change = self.change_route;
+    self.page.go("/");
+    
+  def change_route(self, e = None):
+    route = e.route;
+    match route:
+      case "/":
+        pass;
+      
+      case "/search":
+        self.view.change(1);
   
-def main(page):
-  v = view(page, [
-    ft.Column(controls = [
-      ft.Container(alignment = ft.alignment.center, content = ft.TextField(width = percent(80, page.width), label = "Search", hint_text = "Jojo Music")),
-    ]),
-    ]);
-  v.change(0);
+  def set(self, data):
+    self.info.update(data);
   
-  def change_view(e):
-    page = e.page;
+  def change_destination(self, e):
     index = e.control.selected_index;
-    v.change(index);
-    page.update();
-
-  page.navigation_bar = ft.NavigationBar(
-    destinations = [
-      ft.NavigationDestination(icon = ft.icons.FIND_IN_PAGE, label = "Search"),
-      ft.NavigationDestination(icon = ft.icons.LIBRARY_MUSIC_OUTLINED, label = "Library"),
-    ],
-    on_change = change_view,
-  );
+    match index:
+      case 0:
+        pass;
+      case 1:
+        self.page.go("/search");
+      case 2:
+        pass;
+        
+def main(page):
+  controls = [None, SearchView(page)];
+  view = View(page, controls);
+  router = Router(page, view);
+  for control in controls:
+    control.router = router;
+  
+  page.navigation_bar = ft.NavigationBar(destinations = [
+    ft.NavigationDestination(icon = ft.icons.MUSIC_NOTE, label = "Player"),
+    ft.NavigationDestination(icon = ft.icons.SEARCH, label = "Search"),
+    ft.NavigationDestination(icon = ft.icons.LIBRARY_MUSIC, label = "Library"),
+  ],
+  on_change = router.change_destination,
+  selected_index = None);
   page.update();
-
-   
+  
 ft.app(target = main, port = 8500, view = ft.AppView.WEB_BROWSER);
